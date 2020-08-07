@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 from torch.utils.data import DataLoader,TensorDataset
 from pathlib import Path
-
+from tqdm import tqdm
 
 def parse_fasta(fa_file):
     fa_dict={}
@@ -54,7 +54,7 @@ def predict(model,testLoader,threshold):
     with torch.no_grad():
         pred=torch.DoubleTensor([])
         
-        for idx,seq in enumerate(testLoader):
+        for idx,seq in enumerate(tqdm(testLoader,total=len(testLoader))):
             out=model(seq)
             prob=torch.sigmoid(out).detach().cpu()
             predict=prob
@@ -94,24 +94,29 @@ def p_args():
 def main():
 
     args=p_args()
+    print('**** parsing input files ****')
     mirna_dict=parse_fasta(args.miRNA_file)
     site_dict=parse_fasta(args.site_file)
 
     with open(args.interaction_pair,'r') as r:
         interaction_pair=r.readlines()
-
-    if args.model_type=='similarity matrix':
-        from models import SimilarityMatrixMask
-        modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout).double().cuda()
-
+    print('[INFO] interaction counts: ',str(len(interaction_pair)))
     mir_input,site_input,mir_mask,site_mask=parse2numpy(interaction_pair,mirna_dict,site_dict)
 
     custom_dataset=TensorDataset(torch.tensor(site_input),torch.tensor(mir_input),torch.tensor(site_mask),torch.tensor(mir_mask))
+
+    print('\n**** predicting result ****')
+    if args.model_type=='similarity matrix':
+        from reproduce.models import SimilarityMatrixMask
+        modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout).double().cuda()
 
     modelclassify.load_state_dict(torch.load(args.state_dict_file))
     testLoader=DataLoader(custom_dataset,batch_size=args.batch_size,num_workers=4)
 
     pred=predict(modelclassify,testLoader,args.threshold)
+
+    print('\n**** writing result to  %s ****'%(args.output_file))
+
     output_result(args.output_file,interaction_pair,pred)
 
 if __name__=='__main__':
