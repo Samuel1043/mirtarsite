@@ -72,8 +72,10 @@ optional arguments:
 
 ```
 
-
-
+#### example command
+```
+python3 custom_predict.py ./state_dict/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3_ep47.pth ./example/all_mir.fa ./example/all_site.fa ./example/interaction_pair.txt ./out.txt
+```
 
 
 ## Thesis Reproduce
