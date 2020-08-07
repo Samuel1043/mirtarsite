@@ -1,4 +1,4 @@
-# mirtarsite
+# MirTarSite
 end-to-end microRNA target mrna site prediction
 
 A tool for predicting microRNA target site, given a pair of microRNA and mRNA target sites predict if it's a functional effective miRNA:mRNA interaction.
