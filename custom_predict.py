@@ -73,7 +73,7 @@ def output_result(out_file,interaction_pair,preds):
 
 def p_args():
     # default is the best hyperparameter
-    parser=argparse.ArgumentParser(description='''mirtarsite \nend-to-end microRNA target mrna site prediction tool \n\nInput: microRNA,mRNA target site fasta file,pretrained state dict file \n(Default hyperparameter seeting is the same as my pretrained state dict file)''',\
+    parser=argparse.ArgumentParser(description='''MirTarSite \nend-to-end microRNA target mrna site prediction tool \n\nInput: microRNA,mRNA target site fasta file,pretrained state dict file \n(Default hyperparameter seeting is the same as my pretrained state dict file)''',\
             formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("state_dict_file",help="state dict for model")
     parser.add_argument('miRNA_file',help="microRNA fasta file 5'->3' sequence")
