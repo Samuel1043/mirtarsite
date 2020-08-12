@@ -16,7 +16,21 @@ A tool for predicting microRNA target site, given a pair of microRNA and mRNA ta
 
 #### Input 
 * microRNA fasta file
+```
+>hsa-miR-183-5p
+UAUGGCACUGGUAGAAUUCACU
+>hsa-miR-33a-5p
+GUGCAUUGUAGUUGCAUUGCA
+...
+...
+```
 * mRNA target site fasta file
+```
+>AANAT_site_0
+TTACCGTGCTGATTACTGTGCTA
+>ABCA1_site_9
+AACGTAACTTAACGTAACGTAACTTATCATAGTCATGT
+```
 * interaction pair file
 ```
 hsa-miR-183-5p  AANAT_site_0    
@@ -28,7 +42,6 @@ hsa-miR-129-5p  ABCB1_site_4
 ...
 ```
 * pretrain state dict file
-* output file
 
 #### Usage
 ```
@@ -80,56 +93,91 @@ python3 custom_predict.py ./state_dict/b16_lr0.001_embd100_rnnlayer1_rnnhidden10
 
 ## Thesis Reproduce
 
+```
+cd reproduce
+```
+### download require data
+* require gdrive
+```
+sh download.sh
+```
+* manually download
+https://drive.google.com/drive/folders/1jOEVfwPUoNPLQ6V26bJLKNMVGq0i6HtR?usp=sharing
+putting as the below file structure
+```
+download   
+└───deepmirtar...
+└───mirtarsite...
+└───miRBase...
+└───miRanda-aug2010.tar.gz
+```
+
+### set miRanda to PATH
+```
+mkdir comparetools
+tar -zxvf download/miRanda-aug2010.tar.gz -C comparetools/
+export PATH=$PATH:$(pwd)/comparetools/miRanda-3.3a/bin
+```
+
 ### V1 dataset
 ```
-python3 generate_data.py ./deepmirtar/Supplementary\ File\ S1.\ Positive\ dataset.xlsx ./deepmirtar/Supplementary\ File\ S2.\ Negative\ dataset.xlsx ./mirtarbase/MicroRNA_Target_Sites.xlsx ./miRBase/v22_mature.fa  ./deepmirtar_filter.pkl --filter True --only_deepmirtar True
+python3 generate_data.py ./download/deepmirtar/Supplementary\ File\ S1.\ Positive\ dataset.xlsx ./download/deepmirtar/Supplementary\ File\ S2.\ Negative\ dataset.xlsx ./download/mirtarbase/MicroRNA_Target_Sites.xlsx ./download/miRBase/v22_mature.fa  ./deepmirtar_filter.pkl --filter True --only_deepmirtar True
 
+mkdir dataset_deepmirtar
 
 python3 prepare_dataset.py ./deepmirtar_filter.pkl ./dataset_deepmirtar/ ./dataset_deepmirtar/deepmirtar_filter_test.pkl
 
-python3 gen_compare.py  ./dataset_deepmirtar/deepmirtar_filter_test.pkl ../comparetools/pita/thesis_v2_deepmirtar ../comparetools/miRanda-3.3a/thesis_v2_deepmirtar ../comparetools/RNAhybrid-2.1.2/thesis_v2_deepmirtar
+mkdir thesis_hyper_step2
 
-
-miranda ./thesis_v2_deepmirtar/all_mir.fa ./thesis_v2_deepmirtar/all_site.fa -sc 100 -en -18 -restrict ./thesis_v2_deepmirtar/interaction_pair.txt > ./thesis_v2_deepmirtar_out/en-18.txt
-
-bash run_rnahybrid.sh ./thesis_v2_deepmirtar/ ./thesis_v2_deepmirtar_out/
-bash run_pita.sh  ./thesis_v2_deepmirtar/ ./thesis_v2_deepmirtar_out/
-
-python3 comparetools.py ../comparetools/miRanda-3.3a/thesis_v2_deepmirtar_out/en-18.txt ../comparetools/pita/thesis_v2_deepmirtar_out/ ../comparetools/pita/thesis_v2_deepmirtar/ ../comparetools/RNAhybrid-2.1.2/thesis_v2_deepmirtar_out ../comparetools/RNAhybrid-2.1.2/thesis_v2_deepmirtar
-
-
+# train for five kinds of dropout (step2 hyperparameter tuning)
 declare -a dropout_arr=(0 0.1 0.2 0.3 0.4 0.5)
 for i in "${dropout_arr[@]}"; do
     python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 400 --rnn_layer 1 --train_epoch 50 --batch_size 64 --class_dropout $i ./dataset_deepmirtar './thesis_hyper_step2/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop'$i
 done
 
-
+# evaluate on the best validation accuracy state dict
 python3 evaluate.py ./thesis_hyper_step2/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop0/classify9.pth ./dataset_deepmirtar/valid.pkl --embedding_hidden 100 --rnn_hidden 400 --rnn_layer 1 --class_dropout 0 --threshold 0.7
 ```
+
+
 ### V2 dataset
 
 ```
-python3 generate_data.py ./deepmirtar/Supplementary\ File\ S1.\ Positive\ dataset.xlsx ./deepmirtar/Supplementary\ File\ S2.\ Negative\ dataset.xlsx ./mirtarbase/MicroRNA_Target_Sites.xlsx ./miRBase/v22_mature.fa  ./all_data_filter_revise.pkl --filter True
-
-python3 prepare_dataset.py ./all_data_filter_revise.pkl ./7_7_update/ ./7_7_update/all_data_filter_test.pkl
+python3 generate_data.py ./download/deepmirtar/Supplementary\ File\ S1.\ Positive\ dataset.xlsx ./download/deepmirtar/Supplementary\ File\ S2.\ Negative\ dataset.xlsx ./download/mirtarbase/MicroRNA_Target_Sites.xlsx ./download/miRBase/v22_mature.fa  ./all_data_filter.pkl --filter True
 
 
-python3 gen_compare.py  ./7_7_update/all_data_filter_test.pkl ../comparetools/pita/thesis_v2_test ../comparetools/miRanda-3.3a/thesis_v2_test ../comparetools/RNAhybrid-2.1.2/thesis_v2_test
+mkdir ./all_data
 
-cd $comparetools
+python3 prepare_dataset.py ./all_data_filter.pkl ./all_data/ ./all_data/all_data_filter_test.pkl
 
-miranda ./thesis_v2_test/all_mir.fa ./thesis_v2_test/all_site.fa -sc 100 -en -18 -restrict ./thesis_v2_test/interaction_pair.txt > ./thesis_v2_test_out/en-18.txt
+mkdir thesis_hyper_step2
 
-bash run_rnahybrid.sh ./thesis_v2_test/ ./thesis_v2_test_out/
-bash run_pita.sh  ./thesis_v2_test/ ./thesis_v2_test_out/
 
-python3 comparetools.py ../comparetools/miRanda-3.3a/thesis_v2_test_out/en-18.txt ../comparetools/pita/thesis_v2_test_out/ ../comparetools/pita/thesis_v2_test/ ../comparetools/RNAhybrid-2.1.2/thesis_v2_test_out ../comparetools/RNAhybrid-2.1.2/thesis_v2_test
-
+# train for five kinds of dropout 
 declare -a dropout_arr=(0 0.1 0.2 0.3 0.4 0.5)
 for i in "${dropout_arr[@]}"; do
-    python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --train_epoch 50 --batch_size 16 --class_dropout $i ./7_7_update './thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop'$i;
+    python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --train_epoch 50 --batch_size 16 --class_dropout $i ./all_data './thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop'$i;
 done
 
-python3 evaluate.py ./thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3/classify47.pth ./7_7_update/valid.pkl --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --class_dropout 0.3 --threshold 0.3
+# evaluate on the best validation accuracy state dict
+python3 evaluate.py ./thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3/classify47.pth ./all_data/valid.pkl --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --class_dropout 0.3 --threshold 0.3
 
 ```
+
+### compare with other prediction tools
+#### require tools
+* PITA
+* RNAhybrid
+* miRanda
+```
+python3 gen_compare.py  ./dataset_deepmirtar/deepmirtar_filter_test.pkl ../comparetools/pita/thesis_v2_deepmirtar ../comparetools/miRanda-3.3a/thesis_v2_deepmirtar ../comparetools/RNAhybrid-2.1.2/thesis_v2_deepmirtar
+
+miranda ./thesis_v2_deepmirtar/all_mir.fa ./thesis_v2_deepmirtar/all_site.fa -sc 100 -en -18 -restrict ./thesis_v2_deepmirtar/interaction_pair.txt > ./thesis_v2_deepmirtar_out/en-18.txt
+
+bash run_rnahybrid.sh ./thesis_v2_deepmirtar/ ./thesis_v2_deepmirtar_out/
+
+bash run_pita.sh  ./thesis_v2_deepmirtar/ ./thesis_v2_deepmirtar_out/
+
+python3 comparetools.py ../comparetools/miRanda-3.3a/thesis_v2_deepmirtar_out/en-18.txt ../comparetools/pita/thesis_v2_deepmirtar_out/ ../comparetools/pita/thesis_v2_deepmirtar/ ../comparetools/RNAhybrid-2.1.2/thesis_v2_deepmirtar_out ../comparetools/RNAhybrid-2.1.2/thesis_v2_deepmirtar
+```
+
