@@ -99,7 +99,6 @@ def main():
     create_dataset(X_val,y_val,args.max_len_site,args.max_len_mirna, args.output_dir / 'valid.pkl')
     create_dataset(X_test,y_test,args.max_len_site,args.max_len_mirna, args.output_dir / 'test.pkl')
 
-    print(np.sum(y_test)/len(y_test))
     with open(args.out_comparetools,'wb') as w:
 
         pickle.dump(all_data.loc[idx_test].sort_values('miR_ID').reset_index(drop=True),w)

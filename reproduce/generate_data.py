@@ -53,7 +53,6 @@ def load_deepmirtar(pos_file,neg_file):
     all_deepmirtar['mir_idx']=all_deepmirtar['miRNA_seq'].map(seq2index)
     all_deepmirtar['site_idx']=all_deepmirtar['site_seq'].map(seq2index)
 
-    print(len(all_deepmirtar))
     return all_deepmirtar
 
 def load_mirtarbase(pos_file,v22_miRNA2seq):
@@ -77,9 +76,7 @@ def load_mirtarbase(pos_file,v22_miRNA2seq):
     # site sequence 3'-> 5'
     mi2site['site_seq']=mi2site['site_seq'][::-1]
     mi2site['miRNA_seq']=mi2site['miR_ID'].map(annotate_mir)
-    print(len(mi2site))
     mi2site=mi2site.loc[mi2site['miRNA_seq']!=False]
-    print(len(mi2site))
 
     mi2site['miRNA_seq_len']=mi2site['miRNA_seq'].map(len)
     mi2site['site_seq_len']=mi2site['site_seq'].map(len)
@@ -97,7 +94,6 @@ def load_mirtarbase(pos_file,v22_miRNA2seq):
 
 
     mi2site=mi2site.drop_duplicates(['site_seq','miRNA_seq'])
-    print(len(mi2site))
     mi2site=mi2site.reset_index(drop=True)
 
     return mi2site
@@ -148,6 +144,7 @@ def filter_pos(all_pos):
     input_miRanda(all_pos,Path('./tmp/'))
     subprocess.call(["miranda", "./tmp/all_mir.fa", "./tmp/all_site.fa","-sc","100","-restrict","./tmp/interaction_pair.txt","-out","./tmp/miranda_result.txt"])
     filter_idx=check_filter_score('./tmp/miranda_result.txt',all_pos)
+    subprocess.call(["rm","-r",'./tmp'])
     all_pos_filter=all_pos.loc[filter_idx]
 
     return all_pos_filter
