@@ -4,7 +4,7 @@ import numpy as np
 
 
 class SimilarityMatrixMask(nn.Module):
-    def __init__(self, input_size=5, hidden_size=100, embedding_hidden=100, rnn_num_layer=1, classify_dropout=0, mir_len=30, site_len=50):
+    def __init__(self, input_size=5, hidden_size=100, embedding_hidden=100, rnn_num_layer=1, classify_dropout=0, mir_len=30, site_len=50,device='cpu'):
         super(SimilarityMatrixMask, self).__init__()
 
         def calculate_conv_maxpool_size(h, w, pad, dil, kernel, stride):
@@ -12,11 +12,12 @@ class SimilarityMatrixMask(nn.Module):
             wout = np.floor((w+2*pad[1]-dil[1]*(kernel[1]-1)-1)/stride[1]+1)
             return hout, wout
 
+        self.device=device
         # embedding layer for site and mir
         self.mirembedding = nn.Embedding(
-            input_size, embedding_hidden, padding_idx=0).cuda()
+            input_size, embedding_hidden, padding_idx=0).to(device)
         self.utrembedding = nn.Embedding(
-            input_size, embedding_hidden, padding_idx=0).cuda()
+            input_size, embedding_hidden, padding_idx=0).to(device)
 
         self.mirna = nn.LSTM(embedding_hidden, hidden_size,
                              num_layers=rnn_num_layer, batch_first=True, bidirectional=True)
@@ -74,14 +75,14 @@ class SimilarityMatrixMask(nn.Module):
 
     def forward(self, x):
 
-        embed_utr = self.mirembedding(x[0].long().cuda())
-        embed_mir = self.utrembedding(x[1].long().cuda())
+        embed_utr = self.mirembedding(x[0].long().to(self.device))
+        embed_mir = self.utrembedding(x[1].long().to(self.device))
 
         mir, (mir_hid, _) = self.mirna(embed_mir)
         utr, (utr_hid, _) = self.utr(embed_utr)
 
-        utr_mask = x[2].long().cuda().unsqueeze(2).expand(utr.shape)
-        mir_mask = x[3].long().cuda().unsqueeze(2).expand(mir.shape)
+        utr_mask = x[2].long().to(self.device).unsqueeze(2).expand(utr.shape)
+        mir_mask = x[3].long().to(self.device).unsqueeze(2).expand(mir.shape)
 
         # add kernal 1
         interaction = torch.bmm(
@@ -104,14 +105,14 @@ class SimilarityMatrixMask(nn.Module):
         plot saliency map 
         '''
 
-        embed_utr = self.mirembedding(x[0].long().cuda())
-        embed_mir = self.utrembedding(x[1].long().cuda())
+        embed_utr = self.mirembedding(x[0].long().to(self.device))
+        embed_mir = self.utrembedding(x[1].long().to(self.device))
 
         mir, (mir_hid, _) = self.mirna(embed_mir)
         utr, (utr_hid, _) = self.utr(embed_utr)
 
-        utr_mask = x[2].long().cuda().unsqueeze(2).expand(utr.shape)
-        mir_mask = x[3].long().cuda().unsqueeze(2).expand(mir.shape)
+        utr_mask = x[2].long().to(self.device).unsqueeze(2).expand(utr.shape)
+        mir_mask = x[3].long().to(self.device).unsqueeze(2).expand(mir.shape)
 
         # add kernal 1
         interaction = torch.bmm(

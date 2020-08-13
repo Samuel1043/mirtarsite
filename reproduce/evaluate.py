@@ -70,6 +70,7 @@ def p_args():
     parser.add_argument('--rnn_layer',type=int,default=1,help='num of layer for RNN')
     parser.add_argument('--class_dropout',type=float,default=0,help='dropout in classify layer')
     parser.add_argument('--threshold',type=float,default=0.5,help='threshold for binary classification')
+    parser.add_argument('--cuda',default=False)
 
     args=parser.parse_args()
     return args
@@ -78,9 +79,17 @@ def p_args():
 def main():
     
     args=p_args()
+
+    if args.cuda:
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    else:
+        device='cpu'
+
     if args.model_type=='similarity matrix':
         from models import SimilarityMatrixMask
-        modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout).double().cuda()
+
+        
+        modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout,device=device).double().to(device)
 
     
     modelclassify.load_state_dict(torch.load(args.state_dict_file))

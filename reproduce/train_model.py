@@ -12,7 +12,7 @@ import torch.optim as optim
 import torch.nn as nn
 import logging
 
-def train_classify(model,optimizer,criterion,num_epoch,trainLoader,valLoader,size_train,size_val,state_dict_path=None):
+def train_classify(model,optimizer,criterion,num_epoch,trainLoader,valLoader,size_train,size_val,state_dict_path=None,device='cpu'):
     '''
     train model
     '''
@@ -36,7 +36,7 @@ def train_classify(model,optimizer,criterion,num_epoch,trainLoader,valLoader,siz
 
             right+=np.sum(pred.detach().cpu().numpy()==seq[1].numpy())
             
-            batch_loss=criterion(out,seq[1].cuda())
+            batch_loss=criterion(out,seq[1].to(device))
             optimizer.zero_grad()
             batch_loss.backward()
             optimizer.step()
@@ -58,7 +58,7 @@ def train_classify(model,optimizer,criterion,num_epoch,trainLoader,valLoader,siz
                 pred[pred<0.5]=0
                 right_val+=np.sum(pred.detach().cpu().numpy()==seq[1].numpy())
 
-                batch_loss=criterion(out,seq[1].cuda())
+                batch_loss=criterion(out,seq[1].to(device))
 
                 val_loss+=batch_loss.item()
                 progress = ('#' * int(float(idx)/len(valLoader)*40)).ljust(40)
@@ -98,6 +98,7 @@ def p_args():
     parser.add_argument('--train_epochs',type=int,default=30,help="num of epoch to train")
     parser.add_argument('--batch_size',type=int,default=32,help="batch size for training model")
     parser.add_argument("--model_type",default='similarity matrix')
+    parser.add_argument('--cuda',default=False)
     args=parser.parse_args()
     return args
 
@@ -115,11 +116,17 @@ def main():
     logging.info('train data size '+str(len(trainLoader.dataset)))
     logging.info('val data size '+str(len(valLoader.dataset)))
 
-    modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout).double().cuda()
+    if args.cuda:
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    else:
+        device='cpu'
+
+    modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout,device=device).double().to(device)
     optimizer=optim.Adam(params=modelclassify.parameters(),lr=args.lr)
     criterion=nn.BCEWithLogitsLoss()
     logging.info('training model ...')
-    train_classify(modelclassify,optimizer,criterion,args.train_epochs,trainLoader,valLoader,len(trainLoader.dataset),len(valLoader.dataset),args.state_dict_path)
+    train_classify(modelclassify,optimizer,criterion,args.train_epochs,trainLoader,valLoader,\
+        len(trainLoader.dataset),len(valLoader.dataset),args.state_dict_path,device=device)
 
     
 if __name__=='__main__':

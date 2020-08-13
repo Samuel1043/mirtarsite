@@ -30,6 +30,8 @@ GUGCAUUGUAGUUGCAUUGCA
 TTACCGTGCTGATTACTGTGCTA
 >ABCA1_site_9
 AACGTAACTTAACGTAACGTAACTTATCATAGTCATGT
+...
+...
 ```
 * interaction pair file
 ```
@@ -87,7 +89,10 @@ optional arguments:
 
 #### example command
 ```
-python3 custom_predict.py ./state_dict/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3_ep47.pth ./example/all_mir.fa ./example/all_site.fa ./example/interaction_pair.txt ./out.txt
+# state dict for V2 dataset (recommend)
+python3 custom_predict.py ./state_dict/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3_ep47.pth ./example/all_mir.fa ./example/all_site.fa ./example/interaction_pair.txt ./example/out_V2.txt --cuda True
+# state dict for V1 dataset
+python3 custom_predict.py ./state_dict/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop0_ep9.pth ./example/all_mir.fa ./example/all_site.fa ./example/interaction_pair.txt ./example/out_V1.txt --cuda True  --rnn_hidden 400 --class_dropout 0 --threshold 0.7
 ```
 
 
@@ -132,11 +137,11 @@ mkdir thesis_hyper_step2
 # train for five kinds of dropout (step2 hyperparameter tuning)
 declare -a dropout_arr=(0 0.1 0.2 0.3 0.4 0.5)
 for i in "${dropout_arr[@]}"; do
-    python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 400 --rnn_layer 1 --train_epoch 50 --batch_size 64 --class_dropout $i ./dataset_deepmirtar './thesis_hyper_step2/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop'$i
+    python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 400 --rnn_layer 1 --train_epoch 50 --batch_size 64 --class_dropout $i --cuda True ./dataset_deepmirtar './thesis_hyper_step2/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop'$i 
 done
 
 # evaluate on the best validation accuracy state dict
-python3 evaluate.py ./thesis_hyper_step2/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop0/classify9.pth ./dataset_deepmirtar/valid.pkl --embedding_hidden 100 --rnn_hidden 400 --rnn_layer 1 --class_dropout 0 --threshold 0.7
+python3 evaluate.py ./thesis_hyper_step2/deepmirtar_b64_lr0.001_embd100_rnnlayer1_rnnhidden400_drop0/classify9.pth ./dataset_deepmirtar/valid.pkl --embedding_hidden 100 --rnn_hidden 400 --rnn_layer 1 --class_dropout 0 --threshold 0.7 --cuda True
 ```
 
 
@@ -156,11 +161,11 @@ mkdir thesis_hyper_step2
 # train for five kinds of dropout 
 declare -a dropout_arr=(0 0.1 0.2 0.3 0.4 0.5)
 for i in "${dropout_arr[@]}"; do
-    python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --train_epoch 50 --batch_size 16 --class_dropout $i ./all_data './thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop'$i;
+    python3 train_model.py --lr 0.001 --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --train_epoch 50 --batch_size 16 --class_dropout $i --cuda True ./all_data './thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop'$i;
 done
 
 # evaluate on the best validation accuracy state dict
-python3 evaluate.py ./thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3/classify47.pth ./all_data/valid.pkl --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --class_dropout 0.3 --threshold 0.3
+python3 evaluate.py ./thesis_hyper_step2/b16_lr0.001_embd100_rnnlayer1_rnnhidden100_drop0.3/classify47.pth ./all_data/valid.pkl --embedding_hidden 100 --rnn_hidden 100 --rnn_layer 1 --class_dropout 0.3 --threshold 0.3 --cuda True
 
 ```
 
