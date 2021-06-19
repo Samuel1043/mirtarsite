@@ -112,13 +112,13 @@ def main():
     if args.cuda:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     else:
-        device='cpu'
+        device= torch.device("cpu")
 
     if args.model_type=='similarity matrix':
         from reproduce.models import SimilarityMatrixMask
         modelclassify=SimilarityMatrixMask(5,args.rnn_hidden,args.embedding_hidden,args.rnn_layer,args.class_dropout,device=device).double().to(device)
 
-    modelclassify.load_state_dict(torch.load(args.state_dict_file))
+    modelclassify.load_state_dict(torch.load(args.state_dict_file),map_location=device))
     testLoader=DataLoader(custom_dataset,batch_size=args.batch_size,num_workers=4)
 
     pred=predict(modelclassify,testLoader,args.threshold)
